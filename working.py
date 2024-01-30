@@ -1,4 +1,4 @@
-#Version '1.4 beta'
+#Version '1.5 beta'
 from machine import Pin, PWM
 from time import sleep
 from machine import RTC
@@ -29,6 +29,7 @@ MQTT_TOPIC_LED_SET = 'gateway/lamp/111105/set'
 
 delay = 3
 led_state = False
+update = False
 # def do_connect(ssid, password):
 #     import network
 #     wlan = network.WLAN(network.STA_IF)
@@ -84,6 +85,7 @@ def measure():
 def subscribe_callback(topic, message):
     global delay
     global led_state
+    global update
     try:
         topic = topic.decode('utf-8')
         message = message.decode('utf-8')
@@ -93,6 +95,8 @@ def subscribe_callback(topic, message):
             delay = data['delay']
         if 'led1' in data:
             led_state = data['led1']
+        if 'update' in data:
+            update = data['update']
     except ValueError as e:
         # In case the payload is not a valid JSON
         print(f"Error parsing JSON: {e}")    
@@ -107,6 +111,9 @@ def play_sound():
     
 # do_connect('vulcan-things', 'welcome.to.the.vulcan')
 def main_cycle():
+    global led_state
+    global update
+    update = False
     led.value(False)
     mqtt_client = connect_mqtt()
 
@@ -126,5 +133,8 @@ def main_cycle():
         send_mqtt(mqtt_client, temperature_json_str, MQTT_TOPIC_TEMPERATURE)
         send_mqtt(mqtt_client, humidity_json_str, MQTT_TOPIC_HUMIDITY)
         play_sound()
+        print(update)
+        if update:
+            break
         sleep(delay)
 
