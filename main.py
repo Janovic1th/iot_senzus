@@ -1,4 +1,4 @@
-#Version '1.0 beta'
+#Version '1.1 beta'
 from machine import Pin, PWM
 from time import sleep
 from machine import RTC
@@ -20,25 +20,26 @@ MQTT_USERNAME = 'maker'
 MQTT_PASSWORD = 'this.is.mqtt'
 
 MQTT_TOPIC_TEMPERATURE = 'gateway/temperature/111101'
+MQTT_TOPIC_HUMIDITY = 'gateway/humidity/111102'
 
 CLIENT_ID = 'Janko'
 
 MQTT_TOPIC_TEMPERATURE_SET = 'gateway/temperature/111101/set'
 MQTT_TOPIC_LED_SET = 'gateway/lamp/111105/set'
 
-delay = 2
+delay = 3
 led_state = False
-def do_connect(ssid, password):
-    import network
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    if not wlan.isconnected():
-        print('connecting to network...')
-        wlan.connect(ssid, password)
-        while not wlan.isconnected():
-            pass
-    print('network config:', wlan.ifconfig())
-    
+# def do_connect(ssid, password):
+#     import network
+#     wlan = network.WLAN(network.STA_IF)
+#     wlan.active(True)
+#     if not wlan.isconnected():
+#         print('connecting to network...')
+#         wlan.connect(ssid, password)
+#         while not wlan.isconnected():
+#             pass
+#     print('network config:', wlan.ifconfig())
+#     
     
 # Connect to MQTT Broker
 def connect_mqtt():
@@ -46,25 +47,36 @@ def connect_mqtt():
     return client
 
 # Send Data to MQTT Broker
-def send_mqtt(client, message):
-    client.publish(MQTT_TOPIC_TEMPERATURE, message)
+def send_mqtt(client, message, TOPIC):
+    client.publish(TOPIC, message)
     print(f'Sent to MQTT Broker: {message}')
     
 def measure():
     try:
+        ts = time.mktime(time.localtime())
         rtc_time = rtc.datetime()
         datetime_str = "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.{:06d}Z".format(
             rtc_time[0], rtc_time[1], rtc_time[2], rtc_time[4], rtc_time[5], rtc_time[6], rtc_time[7])
         sensor.measure()
         temp = sensor.temperature()
         hum = sensor.humidity()
-        return {
-                "ts": datetime_str,
-                #"name":"temperature",
-                #"id": "111101",
-                "temperature": temp
-                #"hum": hum
-            }
+        temperature_data = {
+            "name": "MariaDB teplomer",
+            "ts": ts,
+            #"dt": datetime_str,
+            "temperature": temp,
+            "battery": 100
+        }
+
+        humidity_data = {
+            "name": "MariaDB humiditymeter",
+            "ts": ts,
+            #"dt": datetime_str,
+            "humidity": hum,
+            "battery": 100
+        }
+        return temperature_data, humidity_data
+    
     except OSError as e:
         return "ERROR MEASURING!"
     
@@ -93,7 +105,7 @@ def play_sound():
     buzzer.duty_u16(0)
 #do_connect('raspberry', '123456789')
     
-do_connect('vulcan-things', 'welcome.to.the.vulcan')
+# do_connect('vulcan-things', 'welcome.to.the.vulcan')
 led.value(False)
 mqtt_client = connect_mqtt()
 
@@ -106,7 +118,11 @@ mqtt_client.subscribe(MQTT_TOPIC_LED_SET)
 while True:
     mqtt_client.check_msg()
     led.value(led_state)
-    measures = json.dumps(measure())
-    send_mqtt(mqtt_client, measures)
+    temperature_json, humidity_json = measure()
+
+    temperature_json_str = json.dumps(temperature_json)
+    humidity_json_str = json.dumps(humidity_json)
+    send_mqtt(mqtt_client, temperature_json_str, MQTT_TOPIC_TEMPERATURE)
+    send_mqtt(mqtt_client, humidity_json_str, MQTT_TOPIC_HUMIDITY)
     play_sound()
     sleep(delay)
