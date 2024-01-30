@@ -1,4 +1,4 @@
-#Version '1.1 beta'
+#Version '1.2 beta'
 from machine import Pin, PWM
 from time import sleep
 from machine import RTC
