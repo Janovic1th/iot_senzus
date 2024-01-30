@@ -1,4 +1,4 @@
-#Version '1.5 beta'
+#Version '1.7 beta'
 from machine import Pin, PWM
 from time import sleep
 from machine import RTC
@@ -124,7 +124,7 @@ def main_cycle():
     mqtt_client.subscribe(MQTT_TOPIC_LED_SET)
 
     while True:
-        print("v. 1.6")
+        print("v. 1.7")
         mqtt_client.check_msg()
         led.value(led_state)
         temperature_json, humidity_json = measure()
