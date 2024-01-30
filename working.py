@@ -124,6 +124,7 @@ def main_cycle():
     mqtt_client.subscribe(MQTT_TOPIC_LED_SET)
 
     while True:
+        print("v. 1.5")
         mqtt_client.check_msg()
         led.value(led_state)
         temperature_json, humidity_json = measure()
@@ -137,4 +138,6 @@ def main_cycle():
         if update:
             break
         sleep(delay)
+
+
 
